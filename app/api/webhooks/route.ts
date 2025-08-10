@@ -17,7 +17,11 @@ const relevantEvents = new Set([
   'checkout.session.completed',
   'customer.subscription.created',
   'customer.subscription.updated',
-  'customer.subscription.deleted'
+  'customer.subscription.deleted',
+  // 'charge.succeeded',
+  // 'payment_intent.created',
+  // 'payment_intent.succeeded',
+  // 'payment_intent.payment_failed'
 ]);
 
 export async function POST(

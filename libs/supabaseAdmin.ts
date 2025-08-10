@@ -4,14 +4,12 @@ import { createClient } from "@supabase/supabase-js";
 import { Database } from "@/types_db";
 import { Price, Product } from "@/types";
 
-import { stripe } from "./stripe";
-import { toDateTime } from "./helpers";
-import { metadata } from "@/app/layout";
-import { subscribe } from "diagnostics_channel";
+import { stripe } from './stripe'
+import { toDateTime } from './helpers'
 
 export const supabaseAdmin = createClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+  process.env.SUPABASE_SERVICE_ROLE_KEY || '',
 );
 
 const upsertProductRecord = async (product: Stripe.Product) => {
@@ -26,7 +24,7 @@ const upsertProductRecord = async (product: Stripe.Product) => {
 
   const { error } = await supabaseAdmin
     .from('products')
-    .upsert([productData]);
+    .upsert([productData])
 
   if (error) {
     throw error;
@@ -61,15 +59,7 @@ const upsertPriceRecord = async (price: Stripe.Price) => {
   console.log(`Price inserted/updated: ${price.id}`);
 }
 
-
-
-const createOrRetrieveCustomer = async ({
-  email,
-  uuid
-}: {
-  email: string,
-  uuid: string
-}) => {
+const createOrRetriveCustomer = async ({ email, uuid }: { email: string, uuid: string }) => {
   const { data, error } = await supabaseAdmin
     .from('customers')
     .select('stripe_customer_id')
@@ -88,7 +78,7 @@ const createOrRetrieveCustomer = async ({
     const customer = await stripe.customers.create(customerData);
     const { error: supabaseError } = await supabaseAdmin
       .from('customers')
-      .insert([{ id: uuid, stripe_customer_id: customer.id }]);
+      .insert([{ id: uuid, stripe_customer_id: customer.id }])
 
     if (supabaseError) {
       throw supabaseError;
@@ -101,21 +91,20 @@ const createOrRetrieveCustomer = async ({
   return data.stripe_customer_id;
 };
 
-const copyBillingDetailsToCustomer = async (
-  uuid: string,
-  payment_method: Stripe.PaymentMethod
-) => {
+const copyBillingDetailsToCustomer = async (uuid: string, payment_method: Stripe.PaymentMethod) => {
   const customer = payment_method.customer as string;
   const { name, phone, address } = payment_method.billing_details;
+
   if (!name || !phone || !address) return;
 
+  //@ts-ignore
   await stripe.customers.update(customer, { name, phone, address });
+
   const { error } = await supabaseAdmin
     .from('users')
     .update({
       billing_address: { ...address },
-      payment_method: { ...payment_method[payment_method.type] }
-
+      payment_method: { ...payment_method[payment_method.type] },
     })
     .eq('id', uuid);
 
@@ -140,7 +129,7 @@ const manageSubscriptionStatusChange = async (
   const subscription = await stripe.subscriptions.retrieve(
     subscriptionId,
     {
-      expand:["default_payment_method"]
+      expand: ["default_payment_method"]
     }
   );
 
@@ -161,8 +150,8 @@ const manageSubscriptionStatusChange = async (
     created: toDateTime(subscription.created).toISOString(),
     ended_at: subscription.ended_at ? toDateTime(subscription.ended_at).toISOString() : null,
     trial_start: subscription.trial_start ? toDateTime(subscription.trial_start).toISOString() : null,
-    trial_end: subscription.trial_end ? toDateTime(subscription.trial_end).toISOString() : null
-  };
+    trial_end: subscription.trial_end ? toDateTime(subscription.trial_end).toISOString() : null,
+  }
 
   const { error } = await supabaseAdmin
     .from('subscriptions')
@@ -172,7 +161,7 @@ const manageSubscriptionStatusChange = async (
 
   console.log(`Inserted / Updated subscription [${subscription.id} for ${uuid}]`);
 
-  if(createAction && subscription.default_payment_method && uuid) {
+  if (createAction && subscription.default_payment_method && uuid) {
     await copyBillingDetailsToCustomer(
       uuid,
       subscription.default_payment_method as Stripe.PaymentMethod
@@ -183,7 +172,6 @@ const manageSubscriptionStatusChange = async (
 export {
   upsertProductRecord,
   upsertPriceRecord,
-  createOrRetrieveCustomer,
-  manageSubscriptionStatusChange,
+  createOrRetriveCustomer,
+  manageSubscriptionStatusChange
 }
-

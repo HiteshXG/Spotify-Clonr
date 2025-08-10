@@ -24,7 +24,6 @@ const getLikedSongs = async (): Promise<Song[]> => {
     return [];
   }
 
-  return data.map((item)=>({...item.songs}));
-};
+  return data.map((item)=>({...item.songs}));};
 
 export default getLikedSongs;
